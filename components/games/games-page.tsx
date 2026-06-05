@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { NumberMemoryMatchGame } from './number-memory-match';
 import { ColorSequenceGame } from './color-sequence-game';
-import { BivrantiMazeGame } from './bivranti-maze-game';
 import { playSound } from '@/lib/audio-utils';
+
+const BivrantiMazeGame = dynamic(() => import('./bivranti-maze-game').then(m => ({ default: m.BivrantiMazeGame })), { ssr: false });
 
 const games = [
   {

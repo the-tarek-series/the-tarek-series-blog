@@ -224,9 +224,20 @@ interface Props { onExit: () => void; }
 export function BivrantiMazeGame({ onExit }: Props) {
   const [phase, setPhase] = useState<GamePhase>('intro');
   const [mode, setMode] = useState<GameMode>('easy');
-  const [theme, setTheme] = useState<Theme>(() => getSavedTheme());
+  const [theme, setTheme] = useState<Theme>('forest');
   const [playerName, setPlayerName] = useState('');
   const [nameInput, setNameInput] = useState('');
+  const [savedName, setSavedName] = useState<string>('');
+  const [savedThemeLoaded, setSavedThemeLoaded] = useState(false);
+
+  // Load persisted theme and name after mount (client-only)
+  useEffect(() => {
+    const t = getSavedTheme();
+    if (t !== 'forest') setTheme(t);
+    const n = getSavedName();
+    if (n) setSavedName(n);
+    setSavedThemeLoaded(true);
+  }, []);
 
   const [path, setPath] = useState<Cell[]>([]);
   const [decoys, setDecoys] = useState<Set<string>>(new Set());
@@ -413,7 +424,7 @@ export function BivrantiMazeGame({ onExit }: Props) {
 
   // ── Intro ──────────────────────────────────────────────────────────────
   if (phase === 'intro') {
-    const saved = getSavedName();
+    const displayName = playerName || savedName;
     return (
       <div className={cn('min-h-screen bg-gradient-to-br relative overflow-hidden pt-20 pb-20', th.bg)}>
         <style>{mazeCSS}</style>
@@ -445,19 +456,19 @@ export function BivrantiMazeGame({ onExit }: Props) {
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6">
-            {playerName || saved ? (
+            {displayName ? (
               <div className="flex items-center justify-between">
-                <span className="text-slate-300 text-sm">🏃 খেলোয়াড়: <strong className="text-white">{playerName || saved}</strong></span>
-                <button onClick={() => { setPlayerName(''); setNameInput(''); }} className="text-xs text-slate-500 hover:text-slate-300 underline">পরিবর্তন</button>
+                <span className="text-slate-300 text-sm">🏃 খেলোয়াড়: <strong className="text-white">{displayName}</strong></span>
+                <button onClick={() => { setPlayerName(''); setNameInput(''); setSavedName(''); }} className="text-xs text-slate-500 hover:text-slate-300 underline">পরিবর্তন</button>
               </div>
             ) : (
               <div>
                 <p className="text-slate-400 text-sm mb-3 text-center">তোমার নাম লেখো (একবারই লাগবে)</p>
                 <div className="flex gap-2">
                   <input type="text" placeholder="নাম..." value={nameInput} onChange={e => setNameInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && nameInput.trim()) { setPlayerName(nameInput.trim()); saveName(nameInput.trim()); } }}
+                    onKeyDown={e => { if (e.key === 'Enter' && nameInput.trim()) { setPlayerName(nameInput.trim()); saveName(nameInput.trim()); setSavedName(nameInput.trim()); } }}
                     className="flex-1 h-11 px-4 rounded-xl border border-white/20 bg-white/5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20" autoFocus />
-                  <button onClick={() => { if (nameInput.trim()) { setPlayerName(nameInput.trim()); saveName(nameInput.trim()); } }}
+                  <button onClick={() => { if (nameInput.trim()) { setPlayerName(nameInput.trim()); saveName(nameInput.trim()); setSavedName(nameInput.trim()); } }}
                     disabled={!nameInput.trim()} className="px-4 rounded-xl font-bold text-black disabled:opacity-40 transition-all"
                     style={{ background: `linear-gradient(135deg, ${th.pathColor}, ${th.playerColor})` }}>ঠিক</button>
                 </div>
@@ -465,7 +476,7 @@ export function BivrantiMazeGame({ onExit }: Props) {
             )}
           </div>
 
-          <button onClick={() => { if (!playerName && saved) setPlayerName(saved); setPhase('mode-select'); }}
+          <button onClick={() => { if (!playerName && savedName) setPlayerName(savedName); setPhase('mode-select'); }}
             className="w-full h-14 rounded-2xl font-black text-black text-xl transition-all hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98]"
             style={{ background: `linear-gradient(135deg, ${th.pathColor}, ${th.playerColor})` }}>
             এখনই খেলুন 🌀
@@ -508,7 +519,7 @@ export function BivrantiMazeGame({ onExit }: Props) {
                 {hardLb[0] && <span className="text-xs text-red-400 bg-red-500/20 px-2 py-1 rounded-full">সেরা: {formatTime(hardLb[0].time)}</span>}
               </div>
               <h3 className="font-black text-white text-xl mb-1">কঠিন মোড</h3>
-              <p className="text-slate-300 text-sm">২০ ধাপ • কোনো জীবন নেই • একটি ভুল = খেলা শেষ • ৫ সেকেন্ড</p>
+              <p className="text-slate-300 text-sm">२० ধাপ • কোনো জীবন নেই • একটি ভুল = খেলা শেষ • ৫ সেকেন্ড</p>
             </button>
           </div>
           {(easyLb.length > 0 || hardLb.length > 0) && (
