@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RotateCcw, Lightbulb, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/audio-utils';
@@ -51,22 +51,37 @@ const THEME_CONFIG: Record<Theme, {
 // ── LocalStorage helpers ───────────────────────────────────────────────────
 
 function getLeaderboard(mode: GameMode): LeaderEntry[] {
+  if (typeof window === 'undefined') return [];
   try { return JSON.parse(localStorage.getItem(`maze_lb_${mode}`) || '[]'); } catch { return []; }
 }
 function saveLeaderboard(mode: GameMode, entry: LeaderEntry) {
+  if (typeof window === 'undefined') return;
   const lb = getLeaderboard(mode);
   lb.push(entry);
   lb.sort((a, b) => a.time - b.time);
   localStorage.setItem(`maze_lb_${mode}`, JSON.stringify(lb.slice(0, 5)));
 }
 function getBestTime(mode: GameMode): number | null {
+  if (typeof window === 'undefined') return null;
   const lb = getLeaderboard(mode);
   return lb.length > 0 ? lb[0].time : null;
 }
-function getSavedName(): string { return localStorage.getItem('maze_player_name') || ''; }
-function saveName(name: string) { localStorage.setItem('maze_player_name', name); }
-function getSavedTheme(): Theme { return (localStorage.getItem('maze_theme') as Theme) || 'forest'; }
-function saveTheme(t: Theme) { localStorage.setItem('maze_theme', t); }
+function getSavedName(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('maze_player_name') || '';
+}
+function saveName(name: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('maze_player_name', name);
+}
+function getSavedTheme(): Theme {
+  if (typeof window === 'undefined') return 'forest';
+  return (localStorage.getItem('maze_theme') as Theme) || 'forest';
+}
+function saveTheme(t: Theme) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('maze_theme', t);
+}
 
 // ── Path generation ────────────────────────────────────────────────────────
 
