@@ -56,31 +56,35 @@ function getLeaderboard(mode: GameMode): LeaderEntry[] {
 }
 function saveLeaderboard(mode: GameMode, entry: LeaderEntry) {
   if (typeof window === 'undefined') return;
-  const lb = getLeaderboard(mode);
-  lb.push(entry);
-  lb.sort((a, b) => a.time - b.time);
-  localStorage.setItem(`maze_lb_${mode}`, JSON.stringify(lb.slice(0, 5)));
+  try {
+    const lb = getLeaderboard(mode);
+    lb.push(entry);
+    lb.sort((a, b) => a.time - b.time);
+    localStorage.setItem(`maze_lb_${mode}`, JSON.stringify(lb.slice(0, 5)));
+  } catch {}
 }
 function getBestTime(mode: GameMode): number | null {
   if (typeof window === 'undefined') return null;
-  const lb = getLeaderboard(mode);
-  return lb.length > 0 ? lb[0].time : null;
+  try {
+    const lb = getLeaderboard(mode);
+    return lb.length > 0 ? lb[0].time : null;
+  } catch { return null; }
 }
 function getSavedName(): string {
   if (typeof window === 'undefined') return '';
-  return localStorage.getItem('maze_player_name') || '';
+  try { return localStorage.getItem('maze_player_name') || ''; } catch { return ''; }
 }
 function saveName(name: string) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('maze_player_name', name);
+  try { localStorage.setItem('maze_player_name', name); } catch {}
 }
 function getSavedTheme(): Theme {
   if (typeof window === 'undefined') return 'forest';
-  return (localStorage.getItem('maze_theme') as Theme) || 'forest';
+  try { return (localStorage.getItem('maze_theme') as Theme) || 'forest'; } catch { return 'forest'; }
 }
 function saveTheme(t: Theme) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('maze_theme', t);
+  try { localStorage.setItem('maze_theme', t); } catch {}
 }
 
 // ── Path generation ────────────────────────────────────────────────────────
@@ -145,6 +149,16 @@ function formatTime(s: number) {
 }
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('bn-BD', { month: 'short', day: 'numeric' });
+}
+
+function getDirection(from: Cell, to: Cell): string {
+  const dr = to.row - from.row;
+  const dc = to.col - from.col;
+  if (dr === -1) return '↑';
+  if (dr === 1) return '↓';
+  if (dc === -1) return '←';
+  if (dc === 1) return '→';
+  return '';
 }
 
 // ── Particles ──────────────────────────────────────────────────────────────
@@ -715,7 +729,11 @@ export function BivrantiMazeGame({ onExit }: Props) {
                   borderColor = th.decoyColor + '50';
                 }
 
-                return (
+                const isStart = pathIdx === 0;
+                  const isPathEnd = pathIdx === path.length - 1;
+                  const showArrow = (isRevealedPath || isVisiblePath) && pathIdx >= 0 && pathIdx < path.length - 1;
+
+                  return (
                   <button
                     key={key}
                     onClick={() => handleCellTap(cell)}
@@ -740,6 +758,12 @@ export function BivrantiMazeGame({ onExit }: Props) {
                     {!isPlayer && isExit && (
                       <span className={cn('text-base leading-none', isExitCelebrate ? 'maze-door-open' : doorOpen ? 'maze-door-open' : '')}>{isExitCelebrate ? '🎊' : '🚪'}</span>
                     )}
+                    {!isPlayer && !isExit && isStart && (isRevealedPath || isVisiblePath) && (
+                      <span className="text-xs leading-none">🚀</span>
+                    )}
+                    {!isPlayer && !isExit && !isStart && showArrow && (
+                      <span className="text-sm leading-none" style={{ color: th.playerColor }}>{getDirection(path[pathIdx], path[pathIdx + 1])}</span>
+                    )}
                     {isSparkle && <Sparkles color={th.pathColor} />}
                   </button>
                 );
@@ -749,9 +773,11 @@ export function BivrantiMazeGame({ onExit }: Props) {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-3 text-xs text-slate-500 pb-4">
+        <div className="flex items-center justify-center gap-3 text-xs text-slate-500 pb-4 flex-wrap">
           <span>🏃 তুমি</span>
           <span>🚪 বের হওয়ার পথ</span>
+          {(isShowingPhase || showPath) && <span>🚀 শুরু</span>}
+          {(isShowingPhase || showPath) && <span style={{ color: th.playerColor }}>↑↓←→ দিক</span>}
           {(isShowingPhase || showPath) && <span style={{ color: th.pathColor }}>● সঠিক পথ</span>}
           {(isShowingPhase || showPath) && <span style={{ color: th.decoyColor + 'cc' }}>● ফাঁদ</span>}
         </div>
