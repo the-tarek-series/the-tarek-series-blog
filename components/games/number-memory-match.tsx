@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, RotateCcw, Lock, Unlock, Crown, Trophy, X } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Crown, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSound } from '@/lib/audio-utils';
 import { Confetti } from './confetti';
@@ -10,9 +10,9 @@ type Difficulty = 'easy' | 'medium' | 'hard';
 type GamePhase = 'rules' | 'mode-select' | 'playing' | 'won';
 
 const DIFFICULTY_CONFIGS = {
-  easy:   { pairs: 4,  label: 'সহজ 🟢',   desc: '৮টি কার্ড • ১-৯',           baseScore: 100, moveLimit: 10, penalty: 3 },
-  medium: { pairs: 6,  label: 'মাঝারি 🟡', desc: '১২টি কার্ড • ৫০-১০০',      baseScore: 150, moveLimit: 16, penalty: 4 },
-  hard:   { pairs: 8,  label: 'কঠিন 🔴',   desc: '১৬টি কার্ড • মিশ্র সংখ্যা', baseScore: 200, moveLimit: 24, penalty: 5 },
+  easy:   { pairs: 6,  label: 'সহজ 🟢',   desc: '১২টি কার্ড • ১-৯',           baseScore: 100, moveLimit: 6,  penalty: 3 },
+  medium: { pairs: 8,  label: 'মাঝারি 🟡', desc: '১৬টি কার্ড • ৫০-১০০',       baseScore: 150, moveLimit: 8,  penalty: 4 },
+  hard:   { pairs: 10, label: 'কঠিন 🔴',   desc: '২০টি কার্ড • মিশ্র সংখ্যা',  baseScore: 200, moveLimit: 10, penalty: 5 },
 };
 
 interface Card {
@@ -41,7 +41,6 @@ function generateNumbers(diff: Difficulty, count: number): number[] {
       else              nums.push(randInt(100, 500));
     }
   }
-  // Ensure uniqueness within the set
   const unique = Array.from(new Set(nums));
   while (unique.length < count) {
     let n: number;
@@ -60,20 +59,23 @@ function buildDeck(diff: Difficulty): Card[] {
   return pairs.map((number, i) => ({ uid: `c${i}`, number, flipped: false, matched: false, shake: false }));
 }
 
-function calcScore(diff: Difficulty, moves: number, elapsed: number): number {
+function calcScore(diff: Difficulty, moves: number): number {
   const cfg = DIFFICULTY_CONFIGS[diff];
-  const extraMoves = Math.max(0, moves - cfg.moveLimit);
-  let score = Math.max(10, cfg.baseScore - extraMoves * cfg.penalty);
-  if (elapsed < 30) score += 20;
-  else if (elapsed < 60) score += 10;
-  return score;
+  const extraMoves = Math.max(0, moves - cfg.pairs);
+  const raw = 10 - extraMoves * 0.5;
+  return Math.max(1, Math.min(10, Math.round(raw * 10) / 10));
 }
 
-function winMessage(score: number, diff: Difficulty): string {
-  if (diff === 'hard' && score >= 190) return 'তুমি একদম জিনিয়াস! 🧠🔥';
-  if (score >= 170) return 'অসাধারণ! তুমি মেমরি মাস্টার! 🏆';
-  if (score >= 130) return 'বাহ! দারুণ খেলেছ! 🎉';
-  if (score >= 90)  return 'ভালো চেষ্টা! আরেকটু ভালো করতে পারবে! 👏';
+function starCount(score: number): number {
+  if (score >= 9) return 3;
+  if (score >= 6) return 2;
+  return 1;
+}
+
+function winMessage(score: number): string {
+  if (score >= 9) return 'তুমি একদম জিনিয়াস! 🧠🔥';
+  if (score >= 7) return 'অসাধারণ! দারুণ খেলেছ! 🎉';
+  if (score >= 5) return 'ভালো চেষ্টা! 👏';
   return 'পরের বার আরও ভালো হবে! 💪';
 }
 
@@ -109,13 +111,11 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
   const [startTime, setStartTime] = useState<number>(0);
   const [elapsed, setElapsed] = useState(0);
   const [locked, setLocked] = useState(false);
-  const [hardModeLocked, setHardModeLocked] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [finalElapsed, setFinalElapsed] = useState(0);
   const [scoreboard, setScoreboard] = useState<ScoreEntry[]>([]);
   const gameAreaRef = useRef<HTMLDivElement>(null);
 
-  // Check if rules seen on first render
   useEffect(() => {
     const rulesSeen = localStorage.getItem('nmm_rules_seen');
     const savedName = getSavedName();
@@ -123,7 +123,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
     if (rulesSeen) setPhase('mode-select');
   }, []);
 
-  // Timer
   useEffect(() => {
     if (phase !== 'playing') return;
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 200);
@@ -138,7 +137,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
     setElapsed(0);
     setLocked(true);
 
-    // Brief preview: show all cards for 1.5s
     setCards(deck.map(c => ({ ...c, flipped: true })));
     setTimeout(() => {
       setCards(deck.map(c => ({ ...c, flipped: false })));
@@ -163,7 +161,8 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
 
     if (newSelected.length === 2) {
       setLocked(true);
-      setMoves(m => m + 1);
+      const newMoves = moves + 1;
+      setMoves(newMoves);
       const [aUid, bUid] = newSelected;
       const a = newCards.find(c => c.uid === aUid)!;
       const b = newCards.find(c => c.uid === bUid)!;
@@ -176,20 +175,17 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
         setLocked(false);
 
         if (matched.every(c => c.matched)) {
-          const t = Date.now();
-          const el = Math.floor((t - startTime) / 1000);
-          const score = calcScore(difficulty, moves + 1, el);
+          const el = Math.floor((Date.now() - startTime) / 1000);
+          const score = calcScore(difficulty, newMoves);
           setFinalScore(score);
           setFinalElapsed(el);
           playSound.winFanfare();
-          if (difficulty === 'hard') setHardModeLocked(true);
           const boards = getScoreboard();
           setScoreboard(boards);
           setPhase('won');
         }
       } else {
         playSound.errorBuzz();
-        // Shake and auto-hide after 1s
         setCards(newCards.map(c => newSelected.includes(c.uid) ? { ...c, shake: true } : c));
         setTimeout(() => {
           setCards(prev => prev.map(c => newSelected.includes(c.uid) ? { ...c, flipped: false, shake: false } : c));
@@ -210,7 +206,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
     setScoreboard(getScoreboard());
   };
 
-  // Rules screen
   if (phase === 'rules') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/30 to-slate-950 pt-24 pb-20">
@@ -226,9 +221,9 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6 space-y-4 text-sm text-slate-300">
             {[
               ['🎯', 'কার্ড উলটিয়ে একই সংখ্যার দুটি কার্ড মেলাও'],
-              ['⚡', 'কম চেষ্টায় মিলালে বেশি স্কোর পাবে'],
-              ['⏱', '৩০ সেকেন্ডের মধ্যে জিতলে +২০, ৬০ সেকেন্ডে +১০ বোনাস'],
-              ['🔒', 'কঠিন মোড জিতলে হার্ড লক — আনলক করতে হবে'],
+              ['⚡', 'যত কম চেষ্টায় মিলাবে তত বেশি স্কোর (১০/১০ থেকে শুরু)'],
+              ['⭐', 'স্কোর ৯+ = ৩ তারা, ৬-৮ = ২ তারা, ৫ এর নিচে = ১ তারা'],
+              ['🔢', 'সহজ: ১-৯, মাঝারি: ৫০-১০০, কঠিন: মিশ্র সংখ্যা'],
             ].map(([icon, text]) => (
               <div key={text as string} className="flex items-start gap-3">
                 <span className="text-xl flex-shrink-0">{icon}</span>
@@ -237,10 +232,9 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
             ))}
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 text-xs text-slate-400 space-y-1">
-            <p className="font-bold text-slate-300 mb-2">স্কোর হিসাব:</p>
-            <p>সহজ: ≤১০ চেষ্টা = ১০০ পয়েন্ট, প্রতি অতিরিক্ত চেষ্টায় -৩</p>
-            <p>মাঝারি: ≤১৬ চেষ্টা = ১৫০ পয়েন্ট, প্রতি অতিরিক্তে -৪</p>
-            <p>কঠিন: ≤২৪ চেষ্টা = ২০০ পয়েন্ট, প্রতি অতিরিক্তে -৫</p>
+            <p className="font-bold text-slate-300 mb-2">স্কোর হিসাব (X/১০):</p>
+            <p>নিখুঁত = ১০/১০, প্রতি অতিরিক্ত চেষ্টায় −০.৫ পয়েন্ট</p>
+            <p>সর্বনিম্ন স্কোর: ১/১০</p>
           </div>
           <button
             onClick={() => { localStorage.setItem('nmm_rules_seen', '1'); setPhase('mode-select'); }}
@@ -254,7 +248,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
     );
   }
 
-  // Mode select
   if (phase === 'mode-select') {
     const boards = getScoreboard();
     return (
@@ -269,7 +262,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
             <p className="text-slate-400">কঠিনতা বেছে নাও</p>
           </div>
 
-          {/* Player name */}
           <div className="mb-8">
             {playerName ? (
               <div className="flex items-center justify-center gap-3">
@@ -301,7 +293,7 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
                   <div className="text-3xl mb-2">{diff === 'easy' ? '🟢' : diff === 'medium' ? '🟡' : '🔴'}</div>
                   <h3 className="font-black text-white text-xl mb-1">{cfg.label}</h3>
                   <p className="text-slate-300 text-sm">{cfg.desc}</p>
-                  <p className="text-slate-400 text-xs mt-2">স্কোর: {cfg.baseScore} পয়েন্ট</p>
+                  <p className="text-slate-400 text-xs mt-2">নিখুঁতে: ১০/১০</p>
                 </button>
               );
             })}
@@ -318,7 +310,7 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
                       <span className="text-white font-medium">{s.name}</span>
                       <span className="text-slate-500 text-xs">{s.diff}</span>
                     </div>
-                    <span className="font-black text-yellow-400">{s.score}</span>
+                    <span className="font-black text-yellow-400">{s.score}/10</span>
                   </div>
                 ))}
               </div>
@@ -329,18 +321,24 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
     );
   }
 
-  // Won screen
   if (phase === 'won') {
-    const msg = winMessage(finalScore, difficulty);
-    const emoji = finalScore >= 170 ? '🧠🔥' : finalScore >= 130 ? '🎉' : finalScore >= 90 ? '👏' : '💪';
+    const stars = starCount(finalScore);
+    const msg = winMessage(finalScore);
     return (
       <>
         <Confetti />
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/30 to-slate-950 pt-24 pb-20 flex items-center justify-center">
           <div className="max-w-md w-full px-4 mx-auto text-center">
-            <div className="text-7xl mb-4 animate-bounce">{emoji}</div>
+            <div className="text-7xl mb-4 animate-bounce">🎉</div>
             <h1 className="text-5xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-playfair)' }}>জয়ী!</h1>
-            <p className="text-5xl font-black mb-2" style={{ background: 'linear-gradient(135deg,#3b82f6,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{finalScore} পয়েন্ট</p>
+            <div className="flex items-center justify-center gap-1 mb-2">
+              {[1, 2, 3].map(s => (
+                <span key={s} className={cn('text-4xl transition-opacity', s <= stars ? 'opacity-100' : 'opacity-20')}>⭐</span>
+              ))}
+            </div>
+            <p className="text-5xl font-black mb-6" style={{ background: 'linear-gradient(135deg,#3b82f6,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              {finalScore}<span className="text-2xl">/10</span>
+            </p>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
               <p className="text-xl font-bold text-white mb-4">{msg}</p>
               <div className="space-y-1 text-sm text-slate-300">
@@ -350,7 +348,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
               </div>
             </div>
 
-            {/* Save score */}
             {!showNameInput && !playerName && (
               <button onClick={() => setShowNameInput(true)} className="w-full mb-3 py-3 rounded-xl border border-white/20 text-white hover:bg-white/10 transition-colors">স্কোর সংরক্ষণ করো</button>
             )}
@@ -373,30 +370,16 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
               </div>
             )}
 
-            {hardModeLocked && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-center gap-2 text-red-400 font-bold mb-3">
-                  <Lock className="w-5 h-5" /> কঠিন মোড লক হয়েছে!
-                </div>
-                <button onClick={() => { setHardModeLocked(false); setPhase('mode-select'); }}
-                  className="w-full py-2.5 rounded-lg border border-white/20 text-slate-300 hover:bg-white/10 text-sm flex items-center justify-center gap-2 transition-colors">
-                  <Unlock className="w-4 h-4" /> আনলক করো 🔓
-                </button>
-              </div>
-            )}
-
             <div className="space-y-2">
               <button onClick={() => startGame(difficulty)}
                 className="w-full h-12 rounded-xl font-bold text-black flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#3b82f6,#06b6d4)' }}>
                 <RotateCcw className="w-4 h-4" /> আবার খেলো
               </button>
-              {!hardModeLocked && (
-                <button onClick={() => setPhase('mode-select')}
-                  className="w-full h-12 rounded-xl border border-white/20 text-slate-300 hover:bg-white/10 transition-colors">
-                  মোড পরিবর্তন করো
-                </button>
-              )}
+              <button onClick={() => setPhase('mode-select')}
+                className="w-full h-12 rounded-xl border border-white/20 text-slate-300 hover:bg-white/10 transition-colors">
+                মোড পরিবর্তন করো
+              </button>
               <button onClick={onExit} className="w-full h-12 rounded-xl text-slate-500 hover:text-slate-300 transition-colors text-sm">খেলায় ফিরুন</button>
             </div>
 
@@ -411,7 +394,7 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
                         <span className="text-white">{s.name}</span>
                         <span className="text-slate-500 text-xs">{s.diff}</span>
                       </div>
-                      <span className="font-black text-yellow-400">{s.score}</span>
+                      <span className="font-black text-yellow-400">{s.score}/10</span>
                     </div>
                   ))}
                 </div>
@@ -423,9 +406,8 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
     );
   }
 
-  // Playing screen
   const cfg = DIFFICULTY_CONFIGS[difficulty];
-  const cols = difficulty === 'easy' ? 'grid-cols-4' : difficulty === 'medium' ? 'grid-cols-4 sm:grid-cols-6' : 'grid-cols-4 sm:grid-cols-8';
+  const cols = difficulty === 'hard' ? 'grid-cols-5' : 'grid-cols-4';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/30 to-slate-950 pt-24 pb-20" ref={gameAreaRef}>
@@ -439,13 +421,12 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'খেলোয়াড়', value: playerName || '?', wide: true },
+            { label: 'খেলোয়াড়', value: playerName || '?' },
             { label: 'চেষ্টা', value: moves },
             { label: 'সময়', value: formatTime(elapsed) },
-            { label: 'লক্ষ্য', value: `≤${cfg.moveLimit}` },
+            { label: 'জোড়া', value: `${cards.filter(c => c.matched).length / 2}/${cfg.pairs}` },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-center">
               <div className="text-slate-400 text-xs mb-0.5">{label}</div>
@@ -454,7 +435,6 @@ export function NumberMemoryMatchGame({ onExit }: Props) {
           ))}
         </div>
 
-        {/* Card grid */}
         <div className={cn('grid gap-3', cols)}>
           {cards.map((card) => (
             <button
