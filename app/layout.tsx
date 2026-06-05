@@ -49,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <head>
         <meta name="google-site-verification" content="aWueoCzwGk1ZZT2d9FqPc23-1mJ6_bdPwdj4j8RtU5I" />
+        <meta name="monetag" content="819d9e6ffcab448aecf5c418eb4f9d0d" />
         {/* Google AdSense - replace ca-pub-XXX with your publisher ID */}
         {/* <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXX" crossOrigin="anonymous"></script> */}
       </head>
