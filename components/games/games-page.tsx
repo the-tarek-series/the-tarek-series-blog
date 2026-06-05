@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { NumberMemoryMatchGame } from './number-memory-match';
 import { ColorSequenceGame } from './color-sequence-game';
+import { BivrantiMazeGame } from './bivranti-maze-game';
 import { playSound } from '@/lib/audio-utils';
 
 const games = [
@@ -25,6 +26,16 @@ const games = [
     time: '৩-৭ মিনিট',
     gradientFrom: '#ec4899',
     gradientTo: '#a855f7',
+  },
+  {
+    id: 'bivranti-maze',
+    title: 'বিভ্রান্তির গলি',
+    emoji: '🌀',
+    description: 'গোলকধাঁধার পথ মনে রেখে এগিয়ে যাও! স্মৃতিশক্তি ও মনোযোগের চূড়ান্ত পরীক্ষা!',
+    difficulties: ['সহজ 🟢', 'কঠিন 🔴'],
+    time: '৩-৮ মিনিট',
+    gradientFrom: '#0ea5e9',
+    gradientTo: '#6366f1',
   },
 ];
 
@@ -53,6 +64,7 @@ export function GamesPage() {
 
   if (activeGame === 'numbers-match') return <NumberMemoryMatchGame onExit={() => setActiveGame(null)} />;
   if (activeGame === 'color-memory') return <ColorSequenceGame onExit={() => setActiveGame(null)} />;
+  if (activeGame === 'bivranti-maze') return <BivrantiMazeGame onExit={() => setActiveGame(null)} />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-900/20 to-slate-950 relative overflow-hidden">
@@ -109,7 +121,7 @@ export function GamesPage() {
 
         {/* Game Cards */}
         <div ref={gameScrollRef} className="px-4 sm:px-6 lg:px-8 pb-32">
-          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
             {games.map((game) => (
               <div
                 key={game.id}
