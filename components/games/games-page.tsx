@@ -90,7 +90,7 @@ export function GamesPage() {
                 backgroundClip: 'text',
               }}
             >
-              মনের খেলা 🧠
+              মস্তিষ্কের খেলা 🧠
             </h1>
             <p className="text-xl sm:text-2xl font-bold mb-2"
               style={{ background: 'linear-gradient(135deg,#a78bfa,#f472b6,#34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
