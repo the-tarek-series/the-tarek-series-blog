@@ -1,0 +1,23 @@
+{
+  "/_not-found": "/_not-found",
+  "/page": "/",
+  "/robots.txt/route": "/robots.txt",
+  "/contact/page": "/contact",
+  "/blog/page": "/blog",
+  "/about/page": "/about",
+  "/games/page": "/games",
+  "/bookstore/page": "/bookstore",
+  "/search/page": "/search",
+  "/terms/page": "/terms",
+  "/privacy/page": "/privacy",
+  "/admin/page": "/admin",
+  "/blog/[slug]/page": "/blog/[slug]",
+  "/admin/analytics/page": "/admin/analytics",
+  "/admin/books/page": "/admin/books",
+  "/admin/contacts/page": "/admin/contacts",
+  "/admin/orders/page": "/admin/orders",
+  "/admin/posts/page": "/admin/posts",
+  "/admin/users/page": "/admin/users",
+  "/admin/posts/new/page": "/admin/posts/new",
+  "/admin/posts/[id]/edit/page": "/admin/posts/[id]/edit"
+}
