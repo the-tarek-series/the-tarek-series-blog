@@ -84,7 +84,7 @@ function Confetti() {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 type Level = 'সহজ' | 'মধ্যম' | 'কঠিন';
-type Phase = 'name' | 'tutorial' | 'playing' | 'won';
+type Phase = 'start' | 'tutorial' | 'playing' | 'won';
 
 interface Card { uid: string; id: number; value: number; flipped: boolean; matched: boolean; shake: boolean; }
 interface ScoreEntry { id: string; player_name: string; score: number; time: number; level: string; stars: number; created_at: string; }
@@ -132,8 +132,8 @@ interface Props { onExit: () => void; }
 
 export function MemoryCardGame({ onExit }: Props) {
   const play = useAudio();
-  const [phase, setPhase] = useState<Phase>('name');
-  const [playerName, setPlayerName] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('nmm_name') || '' : '');
+  const [phase, setPhase] = useState<Phase>('start');
+  const [playerName, setPlayerName] = useState('');
   const [level, setLevel] = useState<Level>('সহজ');
   const [levelLocked, setLevelLocked] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
@@ -240,41 +240,37 @@ export function MemoryCardGame({ onExit }: Props) {
   const cfg = LEVEL_CFG[level];
   const matchedCount = cards.filter(c => c.matched).length / 2;
 
-  // ── Name entry ──────────────────────────────────────────────────────────
-  if (phase === 'name') return (
+  // ── Start screen ────────────────────────────────────────────────────────
+  if (phase === 'start') return (
     <div className="pt-24 pb-20">
       <div className="max-w-md mx-auto px-4">
         <button onClick={onExit} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8"><ArrowLeft className="w-4 h-4" /> গেমে ফিরুন</button>
-        <div className="bg-card border border-border rounded-2xl p-8 text-center">
-          <div className="text-5xl mb-4">🧠</div>
-          <h1 className="text-2xl font-bold mb-2">নম্বর মেমোরি ম্যাচ</h1>
-          <p className="text-muted-foreground text-sm mb-6">জোড়া সংখ্যা খুঁজে বের করো!</p>
-          <input type="text" value={playerName}
-            onChange={e => setPlayerName(e.target.value)}
-            placeholder="তোমার নাম লেখো"
-            className="w-full h-11 px-4 rounded-xl border border-border bg-background text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-accent/50 text-center"
-            onKeyDown={e => e.key === 'Enter' && playerName.trim() && (localStorage.setItem('nmm_name', playerName.trim()), setPhase('playing'), startGame())}
-          />
-          <div className="flex gap-2 justify-center mb-6">
-            {(['সহজ','মধ্যম','কঠিন'] as Level[]).map(l => (
-              <button key={l} onClick={() => !levelLocked && setLevel(l)}
-                disabled={levelLocked && l !== level}
-                className={cn('px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all', level === l ? 'border-accent bg-accent/10 text-accent' : 'border-border bg-muted text-muted-foreground')}>
-                {l}
-              </button>
-            ))}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
+          <div className="h-1.5 bg-gradient-to-r from-blue-500 to-cyan-400" />
+          <div className="p-8 text-center">
+            <div className="text-5xl mb-4">🧠</div>
+            <h1 className="text-2xl font-bold mb-2">মাবারি</h1>
+            <p className="text-muted-foreground text-sm mb-6">জোড়া সংখ্যার কার্ড খুঁজে বের করো!</p>
+            <div className="flex gap-2 justify-center mb-6">
+              {(['সহজ','মধ্যম','কঠিন'] as Level[]).map(l => (
+                <button key={l} onClick={() => !levelLocked && setLevel(l)}
+                  disabled={levelLocked && l !== level}
+                  className={cn('px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all', level === l ? 'border-blue-400 bg-blue-100 text-blue-700' : 'border-border bg-muted text-muted-foreground')}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {levelLocked && (
+              <p className="text-xs text-muted-foreground mb-4">কঠিন মোড সম্পন্ন! <button onClick={() => setLevelLocked(false)} className="text-accent underline">মোড পরিবর্তন করুন 🔄</button></p>
+            )}
+            <Button onClick={() => { startGame(); }}
+              className="w-full h-12 bg-gradient-to-r from-blue-500 to-cyan-400 hover:opacity-90 text-white font-bold text-base transition-opacity">
+              খেলা শুরু করো 🚀
+            </Button>
+            <button onClick={() => setShowLeaderboard(!showLeaderboard)} className="mt-4 text-sm text-accent hover:underline flex items-center gap-1 mx-auto">
+              <Trophy className="w-4 h-4" /> স্কোরবোর্ড দেখো
+            </button>
           </div>
-          {levelLocked && (
-            <p className="text-xs text-muted-foreground mb-4">কঠিন মোড সম্পন্ন! <button onClick={() => setLevelLocked(false)} className="text-accent underline">মোড পরিবর্তন করুন 🔄</button></p>
-          )}
-          <Button onClick={() => { if (!playerName.trim()) return; localStorage.setItem('nmm_name', playerName.trim()); startGame(); }}
-            disabled={!playerName.trim()}
-            className="w-full h-12 bg-accent hover:bg-accent/90 text-white font-bold text-base">
-            খেলা শুরু করো 🚀
-          </Button>
-          <button onClick={() => setShowLeaderboard(!showLeaderboard)} className="mt-4 text-sm text-accent hover:underline flex items-center gap-1 mx-auto">
-            <Trophy className="w-4 h-4" /> স্কোরবোর্ড দেখো
-          </button>
         </div>
 
         {showLeaderboard && (
@@ -340,12 +336,17 @@ export function MemoryCardGame({ onExit }: Props) {
           </div>
           {!saved ? (
             <div className="flex gap-2 mb-4">
-              <input readOnly value={playerName} className="flex-1 h-10 px-3 rounded-lg border border-border bg-background text-sm" />
-              <Button onClick={saveScore} disabled={saving} size="sm" className="bg-accent text-white hover:bg-accent/90 shrink-0">{saving ? '...' : 'সেভ করো'}</Button>
+              <input
+                value={playerName}
+                onChange={e => setPlayerName(e.target.value)}
+                placeholder="তোমার নাম লেখো"
+                className="flex-1 h-10 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+              />
+              <Button onClick={saveScore} disabled={saving || !playerName.trim()} size="sm" className="bg-accent text-white hover:bg-accent/90 shrink-0">{saving ? '...' : 'সেভ করো'}</Button>
             </div>
           ) : <p className="text-green-600 text-sm mb-4 font-medium">✅ স্কোর সেভ হয়েছে!</p>}
           <div className="flex gap-3">
-            <Button onClick={() => { stopTimer(); setPhase('name'); }} variant="outline" className="flex-1">← পেছনে</Button>
+            <Button onClick={() => { stopTimer(); setPhase('start'); }} variant="outline" className="flex-1">← পেছনে</Button>
             <Button onClick={() => { stopTimer(); startGame(); }} className="flex-1 bg-accent text-white hover:bg-accent/90"><RotateCcw className="w-4 h-4 mr-1" /> আবার খেলো</Button>
           </div>
         </div>
@@ -358,7 +359,7 @@ export function MemoryCardGame({ onExit }: Props) {
     <div className="pt-20 pb-20">
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => { stopTimer(); setPhase('name'); }} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" /> ফিরে যাও</button>
+          <button onClick={() => { stopTimer(); setPhase('start'); }} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" /> ফিরে যাও</button>
           <div className="flex items-center gap-4 text-sm">
             <span className="bg-accent/10 text-accent px-3 py-1 rounded-full font-medium">{level}</span>
             <span className="font-mono font-bold">{fmtTime(elapsed)}</span>
